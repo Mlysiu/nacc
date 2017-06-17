@@ -32,13 +32,4 @@ class NodeTest extends FlatSpec {
     )))
     lG.calculateClusterCoefficient should be(1.0 / 6.0)
   }
-
-  it should "throw an error when trying to create a node V with neighbours that don't have V set as a neighbour" in {
-    the[IllegalArgumentException] thrownBy {
-      Node(1, Some(Seq(
-        Node(2, Some(Seq(Node(3)))),
-        Node(3, Some(Seq(Node(1))))
-      )))
-    } should have message "requirement failed: No link to current node [1] from neighbour nodes."
-  }
 }
