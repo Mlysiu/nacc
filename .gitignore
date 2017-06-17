@@ -1,0 +1,16 @@
+
+.idea/
+build.sbt
+project/
+target/*
+dist/
+lib_managed/
+src_managed/
+project/boot/
+project/plugins/project/
+.cache
+.lib/
+
+### Scala ###
+*.class
+*.log
