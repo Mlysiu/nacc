@@ -26,4 +26,12 @@ class NACCEngineTest extends FlatSpec {
       Node(4,Some(List(Node(3,None)))),
       Node(1,Some(List(Node(2,Some(List(Node(3,None), Node(4,None)))), Node(3,None))))))
   }
+
+  it should "convert six links including two nodes with neighbours having link to each other and one not connected node" in {
+    NACCEngine.convertLink2Nodes(Seq(Link(1, 2), Link(1, 3), Link(2, 3), Link(2, 4), Link(4, 3), Link(2, 6))) should be (Set(
+      Node(2,Some(List(Node(4,Some(List(Node(3,None)))), Node(3,None), Node(6, None)))),
+      Node(4,Some(List(Node(3,None)))),
+      Node(1,Some(List(Node(2,Some(List(Node(3,None), Node(4,None), Node(6, None)))), Node(3,None))))
+    ))
+  }
 }
