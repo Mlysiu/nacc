@@ -13,7 +13,13 @@ case class Parser(dataProvider: DataProvider, noOFLinesToDropMaybe: Option[Int] 
   val noOfLinesToDrop: Int = noOFLinesToDropMaybe.getOrElse(4)
 
   //TODO: Add more informative type like Either as a return type
-  def parse: Try[Seq[Link]] = Try(dataProvider.readAll.split(lineSeparator).drop(noOfLinesToDrop).map { line =>
+  def parse: Try[Seq[Link]] =
+    for {
+      data <- dataProvider.readAll
+      parsedData <- parseData(data)
+    } yield parsedData
+
+  private def parseData(data: String): Try[Seq[Link]] = Try(data.split(lineSeparator).drop(noOfLinesToDrop).map { line =>
     line.trim().split(" ").filterNot(_.isEmpty).map(_.trim()).toList match {
       case el1 :: el2 :: Nil => Link(el1.toLong, el2.toLong)
       case m => throw new NumberFormatException(s"Illegal format of parsing data: [$m] while it should be [number number]")
