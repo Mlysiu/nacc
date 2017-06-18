@@ -4,7 +4,7 @@ import com.typesafe.scalalogging.Logger
 
 /**
   *
-  * @param id id of the node
+  * @param id              id of the node
   * @param neighboursMaybe all nodes that are nearest neighbours
   */
 case class Node(id: Long, neighboursMaybe: Option[Seq[Node]] = None) {
@@ -14,12 +14,10 @@ case class Node(id: Long, neighboursMaybe: Option[Seq[Node]] = None) {
 
   def calculateClusterCoefficient: Double = {
     val nV = neighbours.count(_.neighbours.map(_.id).exists(neighbours.map(_.id).contains))
-    Log.info("Number of edges between neighbours for node [{}] is: [{}]", id.toString, nV.toString)
-
     val kV = neighbours.length
-    Log.info("Number of neighbours for node [{}] is: [{}]", id.toString, kV.toString)
 
-    (2 * nV: Double) / (kV * (kV - 1): Double)
+    val lcc = (2 * nV: Double) / (kV * (kV - 1): Double)
+    if (lcc.isNaN) 0.0 else lcc
   }
 }
 

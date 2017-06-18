@@ -1,9 +1,13 @@
 package com.mlysiu.nacc.engine
 
 import com.mlysiu.nacc.domain.{Link, Node}
+import com.typesafe.scalalogging.Logger
+
+import scala.util.Try
 
 
 object NACCEngine {
+  val Log = Logger("com.mlysiu.nacc.engine")
 
   /**
     * Convert Links to Nodes containing neighbours of neighbour of currently processed node.
@@ -12,7 +16,10 @@ object NACCEngine {
     */
   def convertLink2Nodes(links: Seq[Link]): Set[Node] = {
     val segregatedLinks = links.groupBy(_.fromId)
+    Log.info("Found unique [{}] nodes to convert", segregatedLinks.size)
     segregatedLinks.map { case (id, neighbourL) =>
+      Log.info("Processing id [{}]", id)
+
       val neighboursIds = neighbourL.map(_.toId)
       val (exists, notExists) = neighboursIds.partition(nId => links.exists(lid => lid.fromId == nId && lid.toId != id))
       val neighboursNLMaybe: Option[Seq[Link]] = links.filter(link => exists.contains(link.fromId))
@@ -42,5 +49,12 @@ object NACCEngine {
       seqMaybe1
     else
       seqMaybe1.flatMap(seq1 => seqMaybe2.map(seq1 ++ _))
+  }
+
+  def calculateACC(links: Seq[Link]): Try[Double] = {
+    Try(convertLink2Nodes(links)).map { nodes =>
+      val lccs = nodes.map(_.calculateClusterCoefficient)
+      lccs.sum / nodes.size: Double
+    }
   }
 }

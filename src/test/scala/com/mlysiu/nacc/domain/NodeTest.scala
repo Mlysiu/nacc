@@ -32,4 +32,11 @@ class NodeTest extends FlatSpec {
     )))
     lG.calculateClusterCoefficient should be(1.0 / 6.0)
   }
+
+  it should "calculate Clustering Coefficient equal to zero when node has a neighbour without any links" in {
+    val lG = Node(1, Some(Seq(
+      Node(2, Some(Seq(Node(3))))
+    )))
+    lG.calculateClusterCoefficient should be(0.0)
+  }
 }
