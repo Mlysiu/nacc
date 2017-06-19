@@ -14,8 +14,9 @@ class DataProviderFromFile(path: String) extends DataProvider {
   override def readAll: Try[String] =
     Try {
       Log.info("Starting reading the file from [{}]", path)
-      val str = scala.io.Source.fromFile(path).mkString
+      val str = scala.io.Source.fromFile(path)
+      val ret = try str.mkString finally str.close()
       Log.info("Finished reading the file")
-      str
+      ret
     }
 }

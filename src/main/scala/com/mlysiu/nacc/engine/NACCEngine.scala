@@ -3,6 +3,7 @@ package com.mlysiu.nacc.engine
 import com.mlysiu.nacc.domain.{Link, Node}
 import com.typesafe.scalalogging.Logger
 
+import scala.collection.mutable.ArrayBuffer
 import scala.util.Try
 
 
@@ -14,27 +15,31 @@ object NACCEngine {
     *
     * @return
     */
-  def convertLink2Nodes(links: Seq[Link]): Set[Node] = {
-    val segregatedLinks = links.groupBy(_.fromId)
-    Log.info("Found unique [{}] nodes to convert", segregatedLinks.size)
-    segregatedLinks.map { case (id, neighbourL) =>
-      Log.info("Processing id [{}]", id)
-
-      val neighboursIds = neighbourL.map(_.toId)
-      val (exists, notExists) = neighboursIds.partition(nId => links.exists(lid => lid.fromId == nId && lid.toId != id))
-      val neighboursNLMaybe: Option[Seq[Link]] = links.filter(link => exists.contains(link.fromId))
-
-      val neighbourNodesMaybe = neighboursNLMaybe.map { neighboursNL =>
-        neighboursNL
-          .groupBy(_.fromId)
-          .map { case (_, ls) =>
-            ls.map(link => Node(link.fromId, Some(Seq(Node(link.toId)))))
-              .reduce { (n1, n2) => Node(n1.id, n1.neighboursMaybe.flatMap(nodes1 => n2.neighboursMaybe.map(nodes2 => nodes1 ++ nodes2))) }
-          }
-          .toSeq
-      }
-      Node(id, ?++?(neighbourNodesMaybe, notExists.map(Node(_))))
+  def calculateLCC(links: Map[Long, ArrayBuffer[Link]]): Set[Double] = {
+    Log.info("Found unique [{}] nodes to convert", links.size)
+    var keyCount = links.keys.size
+    val ret = links.map { case (id, neighbourL) =>
+      keyCount -= 1
+      val ret = convertLinkToNode(id, neighbourL, links).calculateClusterCoefficient
+      Log.info("Converted links for id [{}] to node. Left [{}] ids to convert", id.toString, keyCount.toString)
+        ret
     }.toSet
+    Log.info("Finished converting links to nodes, from [{}] links to [{}] nodes", links.size.toString, ret.size.toString)
+    ret
+  }
+
+  def convertLinkToNode(linkId: Long, neighbourL: ArrayBuffer[Link], links: Map[Long, ArrayBuffer[Link]]) = {
+    val neighboursIds = neighbourL.map(_.toId)
+    val faster = neighboursIds.flatMap(nId => links.get(nId)).flatten
+
+    val notExists = neighboursIds.filterNot(nId => faster.exists(lid => lid.fromId == nId && lid.toId != linkId))
+    val neighbourNodesMaybe =
+      faster.groupBy(_.fromId)
+        .map { case (id, ls) =>
+          val red = ls.map(_.toId).foldLeft(ArrayBuffer[Long]()) { case (array, toId) => array += toId }
+          Node(id, red.map(Node(_)))
+        }.toSeq
+    Node(linkId, Some(neighbourNodesMaybe ++ notExists.map(Node(_))))
   }
 
   implicit def emptySeqToNoneElseSome[T](seq: Seq[T]): Option[Seq[T]] = seq match {
@@ -42,19 +47,9 @@ object NACCEngine {
     case any => Some(any)
   }
 
-  def ?++?[T](seqMaybe1: Option[Seq[T]], seqMaybe2: Option[Seq[T]]): Option[Seq[T]] = {
-    if (seqMaybe1.isEmpty)
-      seqMaybe2
-    else if (seqMaybe2.isEmpty)
-      seqMaybe1
-    else
-      seqMaybe1.flatMap(seq1 => seqMaybe2.map(seq1 ++ _))
-  }
-
   def calculateACC(links: Seq[Link]): Try[Double] = {
-    Try(convertLink2Nodes(links)).map { nodes =>
-      val lccs = nodes.map(_.calculateClusterCoefficient)
-      lccs.sum / nodes.size: Double
+    Try(calculateLCC(ArrayBuffer(links: _*).groupBy(_.fromId))).map { lccs =>
+      lccs.sum / lccs.size: Double
     }
   }
 }

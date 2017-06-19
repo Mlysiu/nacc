@@ -10,7 +10,7 @@ import com.typesafe.scalalogging.Logger
 case class Node(id: Long, neighboursMaybe: Option[Seq[Node]] = None) {
   val Log = Logger("com.mlysiu.nacc.domain")
 
-  val neighbours: Seq[Node] = neighboursMaybe.getOrElse(Seq())
+  lazy val neighbours: Seq[Node] = neighboursMaybe.getOrElse(Seq())
 
   def calculateClusterCoefficient: Double = {
     val nV = neighbours.count(_.neighbours.map(_.id).exists(neighbours.map(_.id).contains))
