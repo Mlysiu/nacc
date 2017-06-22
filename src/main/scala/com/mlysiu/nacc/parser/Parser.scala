@@ -29,7 +29,7 @@ case class Parser(dataProvider: DataProvider, noOFLinesToDropMaybe: Option[Int] 
         case m => throw new NumberFormatException(s"Illegal format of parsing data: [$m] while it should be [number number]")
       }
     }
-    Log.info("Finished parsing the data with [{}] Links", parsedData.size)
+    Log.info("Finished parsing the data with [{}] Links", parsedData.length)
     parsedData
   }
 

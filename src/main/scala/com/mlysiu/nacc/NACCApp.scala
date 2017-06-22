@@ -19,7 +19,7 @@ object NACCApp {
       ancc <- NACCEngine.calculateACC(parsedData)
     } yield ancc
 
-    println(res)
+    println(res.map("%1.4f" format _))
   }
 
 }

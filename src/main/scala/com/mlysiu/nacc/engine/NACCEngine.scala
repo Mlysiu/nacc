@@ -15,31 +15,25 @@ object NACCEngine {
     *
     * @return
     */
-  def calculateLCC(links: Map[Long, ArrayBuffer[Link]]): Set[Double] = {
-    Log.info("Found unique [{}] nodes to convert", links.size)
-    var keyCount = links.keys.size
-    val ret = links.map { case (id, neighbourL) =>
-      keyCount -= 1
-      val ret = convertLinkToNode(id, neighbourL, links).calculateClusterCoefficient
-      Log.info("Converted links for id [{}] to node. Left [{}] ids to convert", id.toString, keyCount.toString)
-        ret
-    }.toSet
-    Log.info("Finished converting links to nodes, from [{}] links to [{}] nodes", links.size.toString, ret.size.toString)
-    ret
-  }
+  def calculateLCC(linksGroupedByFromId: Map[Long, ArrayBuffer[Link]]): Seq[Double] =
+    linksGroupedByFromId.map { case (id, neighbourL) =>
+      convertLinkToNode(id, neighbourL, linksGroupedByFromId).calculateClusterCoefficient
+    }.toSeq
 
-  def convertLinkToNode(linkId: Long, neighbourL: ArrayBuffer[Link], links: Map[Long, ArrayBuffer[Link]]) = {
-    val neighboursIds = neighbourL.map(_.toId)
-    val faster = neighboursIds.flatMap(nId => links.get(nId)).flatten
+  def convertLinkToNode(nodeId: Long, fromNodeLinks: ArrayBuffer[Link], linksGroupedByFromId: Map[Long, ArrayBuffer[Link]]): Node = {
+    val neighboursIds = fromNodeLinks.map(_.toId)
+    val fromNeighbourLinks = neighboursIds.flatMap(nId => linksGroupedByFromId.get(nId)).flatten
 
-    val notExists = neighboursIds.filterNot(nId => faster.exists(lid => lid.fromId == nId && lid.toId != linkId))
-    val neighbourNodesMaybe =
-      faster.groupBy(_.fromId)
+    val (neighNodes, isolatedNodes) = neighboursIds.partition(nId => fromNeighbourLinks.exists(lid => lid.fromId == nId && lid.toId != nodeId))
+    val neighNodesWithNeigh =
+      fromNeighbourLinks.filter(link => neighNodes.contains(link.fromId)).groupBy(_.fromId)
         .map { case (id, ls) =>
-          val red = ls.map(_.toId).foldLeft(ArrayBuffer[Long]()) { case (array, toId) => array += toId }
-          Node(id, red.map(Node(_)))
+          val red = ls.foldLeft(ArrayBuffer[Node]()) { case (array, link) => array += Node(link.toId) }
+          Node(id, red)
         }.toSeq
-    Node(linkId, Some(neighbourNodesMaybe ++ notExists.map(Node(_))))
+
+    require((neighNodesWithNeigh ++ isolatedNodes.map(Node(_))).size == neighboursIds.length, s"Number of neighbours must be the same!. failed for nodeId $nodeId")
+    Node(nodeId, Some(neighNodesWithNeigh ++ isolatedNodes.map(Node(_))))
   }
 
   implicit def emptySeqToNoneElseSome[T](seq: Seq[T]): Option[Seq[T]] = seq match {
@@ -48,8 +42,15 @@ object NACCEngine {
   }
 
   def calculateACC(links: Seq[Link]): Try[Double] = {
-    Try(calculateLCC(ArrayBuffer(links: _*).groupBy(_.fromId))).map { lccs =>
-      lccs.sum / lccs.size: Double
-    }
+    val isolatedNodes = links.map(_.toId).toSet.diff(links.map(_.fromId).toSet)
+    val isolatedLinks = links.filter(link => isolatedNodes.contains(link.toId))
+
+    Log.info("Found [{}] isolated nodes", isolatedNodes.size.toString)
+
+    val nodeIdToNeighbourLinks = ArrayBuffer(links: _*).groupBy(_.fromId) ++ ArrayBuffer(isolatedLinks: _*).groupBy(_.toId)
+
+    Log.info("Calculating Average Cluster Coefficient for total number of [{}] nodes", nodeIdToNeighbourLinks.keys.size.toString)
+
+    Try(calculateLCC(nodeIdToNeighbourLinks)).map(lccs => lccs.sum / lccs.length: Double)
   }
 }

@@ -17,7 +17,8 @@ case class Node(id: Long, neighboursMaybe: Option[Seq[Node]] = None) {
     val kV = neighbours.length
 
     val lcc = (2 * nV: Double) / (kV * (kV - 1): Double)
-    if (lcc.isNaN) 0.0 else lcc
+    if (lcc.isNaN) 0.0
+    else lcc
   }
 }
 
