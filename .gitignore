@@ -1,6 +1,5 @@
 
 .idea/
-build.sbt
 project/
 target/*
 dist/
